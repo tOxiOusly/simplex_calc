@@ -14,6 +14,7 @@ private:
 	int numstr;
 	int numcol;	
 	int* NotBasis;
+	int* final;
 public:
 
 	Matrix(double** matrix, int rows, int cols)
@@ -21,6 +22,7 @@ public:
 		this->numstr = rows;
 		this->numcol = cols;
 		this->matrix = new double* [rows];
+		this->final = new int[cols - rows];
 
 		for (int i = 0; i < rows; ++i)
 		{
@@ -32,6 +34,10 @@ public:
 		}
 
 		this->NotBasis = new int[cols-rows];
+		for (int i = 0; i < cols - rows; ++i)
+		{
+			final[i] = matrix[rows - 1][i];
+		}
 		
 		for (int i = 0; i < cols - rows; ++i)
 		{
@@ -87,6 +93,7 @@ public:
 
 	void PrintAnswer();
 
+	void PrintAnswerToFile();
 };
 
 double Matrix::GetValueByIndex(int i, int j)
@@ -115,7 +122,7 @@ int Matrix::FindColMax()
 {
 	int result = -1;
 	double currMin = CURRMIN;
-	for (int i = 0; i < this->numstr; ++i)
+	for (int i = 0; i < this->numcol-1; ++i)
 	{
 		if (this->matrix[this->numstr - 1][i] < 0 && this->matrix[this->numstr - 1][i] < currMin)
 		{
@@ -130,7 +137,7 @@ int Matrix::FindColMin()
 {
 	int result = -1;
 	double currMax = CURRMAX;
-	for (int i = 0; i < this->numstr-1; ++i)
+	for (int i = 0; i < this->numcol-1; ++i)
 	{
 		if (this->matrix[this->numstr - 1][i] > 0 && this->matrix[this->numstr - 1][i] > currMax)
 		{
@@ -200,7 +207,7 @@ void Matrix::PrintAnswer()
 		if (this->NotBasis[i] != -1)
 		{
 			cout << "x_" << i + 1 << " = " << this->matrix[this->NotBasis[i] - 1][this->numcol-1] << endl;
-			func += this->matrix[this->NotBasis[i] - 1][this->numcol - 1];
+			func += this->matrix[this->NotBasis[i] - 1][this->numcol - 1]*this->final[i];
 		}
 		else
 		{
@@ -209,6 +216,33 @@ void Matrix::PrintAnswer()
 	}
 
 	cout << "F = " << func << endl;
+}
+
+void Matrix::PrintAnswerToFile()
+{
+	ofstream outFile("answer.txt"); // Создаем объект для записи в файл
+	if (!outFile.is_open()) // Проверяем, удалось ли открыть файл
+	{
+		std::cerr << "Failed to open file: " << std::endl;
+		return;
+	}
+
+	double func = 0.0;
+	for (int i = 0; i < this->numcol - numstr; ++i)
+	{
+		if (this->NotBasis[i] != -1)
+		{
+			outFile << "x_" << i + 1 << " = " << this->matrix[this->NotBasis[i] - 1][this->numcol - 1] << std::endl;
+			func += this->matrix[this->NotBasis[i] - 1][this->numcol - 1] * this->final[i];
+		}
+		else
+		{
+			outFile << "x_" << i + 1 << " = 0" << std::endl;
+		}
+	}
+
+	outFile << "F = " << func << std::endl;
+	outFile.close();
 }
 
 int main()
@@ -227,6 +261,8 @@ int main()
 	cin >> cols;
 	cout << endl;
 
+	cols += rows - 1;
+
 	matrix = new double* [rows];
 
 	for (int i = 0; i < rows; ++i)
@@ -236,33 +272,33 @@ int main()
 
 	ifstream inputFile("matrix.txt");
 
-	for (int i = 0; i < rows; ++i)
-	{
-		for (int j = 0; j < cols; ++j)
-		{
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols - rows; ++j) {
 			inputFile >> matrix[i][j];
 		}
+		for (int j = 0; j < rows; ++j) {
+			matrix[i][cols - rows + j] = (i == j) ? 1.0 : 0.0;
+		}
+		inputFile >> matrix[i][cols - 1];
 	}
 
 	inputFile.close();
 
 	Matrix a(matrix, rows, cols);
-	a.PrintMatrix();
 
 	cout << "======================" << endl;
 
-	if (menu == 0)
+	if (menu)
 	{
 		int col = a.FindColMin();
 		int str = a.FindStr(col);
 
+
 		while (col != -1 && str != -1)
 		{
-
 			a.Step(str, col, a.GetValueByIndex(str, col));
 			col = a.FindColMin();
 			str = a.FindStr(col);
-
 		}
 	}
 	else
@@ -278,7 +314,20 @@ int main()
 		}
 	}
 
-	a.PrintAnswer();
+	cout << "======================" << endl;
+
+	cout << "Press 0 to show answer in console\t 1 to create a txt file with answer\n";
+	cin >> menu;
+
+	if (!menu)
+	{
+		a.PrintAnswer();
+	}
+	else
+	{
+		a.PrintAnswerToFile();
+	}
+	
 
 	system("pause");
 
